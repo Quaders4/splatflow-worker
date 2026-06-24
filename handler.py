@@ -97,7 +97,7 @@ def handler(job: dict) -> dict:
                 "ns-train", "splatfacto",
                 "--data", str(data_dir),
                 "--output-dir", str(output_dir),
-                "--max-num-iterations", "30000",
+                "--max-num-iterations", "7000",  # TODO: subir a 30000 para versión final
                 "--pipeline.model.cull-alpha-thresh", "0.005",
                 "nerfstudio-data",
             ],
