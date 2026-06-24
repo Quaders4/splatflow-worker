@@ -10,9 +10,8 @@ import time
 import requests
 import runpod
 from pathlib import Path
-from supabase import create_client
 
-SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 SPLAT_BUCKET = "splats"
 
@@ -35,20 +34,25 @@ def run(cmd: list, timeout: int = 3600, label: str = "") -> None:
 
 
 def upload_to_supabase(local_path: str, storage_path: str) -> str:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    # Sube el archivo a Supabase Storage vía API REST (sin SDK).
+    # Docs: https://supabase.com/docs/reference/api/storage
     with open(local_path, "rb") as f:
         data = f.read()
-    supabase.storage.from_(SPLAT_BUCKET).upload(
-        storage_path,
-        data,
-        file_options={
-            "content-type": "application/octet-stream",
-            "cache-control": "31536000",
-            "upsert": "false",
-        },
-    )
-    url_data = supabase.storage.from_(SPLAT_BUCKET).get_public_url(storage_path)
-    return url_data
+
+    upload_url = f"{SUPABASE_URL}/storage/v1/object/{SPLAT_BUCKET}/{storage_path}"
+    headers = {
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "apikey": SUPABASE_KEY,
+        "Content-Type": "application/octet-stream",
+        "Cache-Control": "31536000",
+        "x-upsert": "false",
+    }
+    res = requests.post(upload_url, headers=headers, data=data, timeout=300)
+    if not res.ok:
+        raise RuntimeError(f"Supabase upload falló {res.status_code}: {res.text[:500]}")
+
+    # URL pública (el bucket 'splats' debe ser público)
+    return f"{SUPABASE_URL}/storage/v1/object/public/{SPLAT_BUCKET}/{storage_path}"
 
 
 def handler(job: dict) -> dict:

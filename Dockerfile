@@ -5,9 +5,10 @@ FROM dromni/nerfstudio:0.3.4
 WORKDIR /app
 
 # Dependencias extras para el handler
+# Solo runpod + requests. Evitamos el SDK de supabase porque sus pins de
+# httpx/pydantic/gotrue chocan con la imagen base de nerfstudio.
 RUN pip install --no-cache-dir \
     runpod==1.7.3 \
-    supabase==2.4.0 \
     requests==2.31.0
 
 COPY handler.py .
