@@ -91,7 +91,20 @@ def handler(job: dict) -> dict:
             label="ns-process-data (COLMAP)",
         )
 
-        # ── 3. Entrenar modelo Gaussian Splatting ───────────────────────
+        # ── 3. Validar que COLMAP encontró suficientes poses ───────────
+        transforms_file = data_dir / "transforms.json"
+        if transforms_file.exists():
+            import json as _json
+            transforms = _json.loads(transforms_file.read_text())
+            n_frames = len(transforms.get("frames", []))
+            if n_frames < 30:
+                raise RuntimeError(
+                    f"Video de baja calidad: COLMAP solo encontró poses para {n_frames} imágenes. "
+                    "Graba un video más lento, nítido y orbitando el espacio. Mínimo recomendado: 30 imágenes con pose."
+                )
+            print(f"[handler] COLMAP encontró {n_frames} imágenes con pose ✓")
+
+        # ── 4. Entrenar modelo Gaussian Splatting ───────────────────────
         run(
             [
                 "ns-train", "splatfacto",
@@ -105,7 +118,7 @@ def handler(job: dict) -> dict:
             label="ns-train splatfacto",
         )
 
-        # ── 4. Encontrar el config.yml del checkpoint ───────────────────
+        # ── 5. Encontrar el config.yml del checkpoint ───────────────────
         configs = sorted(output_dir.glob("splatfacto/*/config.yml"))
         if not configs:
             raise RuntimeError("No se encontró config.yml después del entrenamiento")
