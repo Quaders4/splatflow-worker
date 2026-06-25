@@ -25,12 +25,17 @@ def download_video(url: str, dest: str) -> None:
 
 
 def run(cmd: list, timeout: int = 3600, label: str = "") -> None:
-    print(f"[handler] {label or ' '.join(cmd[:3])}")
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    if result.stdout:
-        print(result.stdout[-3000:])  # últimas 3000 chars
-    if result.returncode != 0:
-        raise RuntimeError(f"{label} falló:\n{result.stderr[-2000:]}")
+    print(f"[handler] {label or ' '.join(cmd[:3])}", flush=True)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    try:
+        stdout, _ = proc.communicate(timeout=timeout)
+        if stdout:
+            print(stdout[-5000:], flush=True)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        raise RuntimeError(f"{label} superó el timeout de {timeout}s")
+    if proc.returncode != 0:
+        raise RuntimeError(f"{label} falló con código {proc.returncode}")
 
 
 def upload_to_supabase(local_path: str, storage_path: str) -> str:
